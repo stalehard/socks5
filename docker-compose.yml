@@ -1,0 +1,7 @@
+version: '3.2'
+services:
+  server:
+    restart: on-failure
+    build: ./server
+    ports:
+      - 1080:1080

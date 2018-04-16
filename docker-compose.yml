@@ -1,7 +1,6 @@
-version: '3.2'
+version: '2'
 services:
-  server:
-    restart: on-failure
+  server:    
     build: ./server
     ports:
       - 1080:1080

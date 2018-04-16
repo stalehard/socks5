@@ -1,7 +1,5 @@
 FROM node:8-alpine
 
-RUN apk add --no-cache curl
-
 ENV WORKDIR="/app"
 RUN mkdir -p ${WORKDIR}
 WORKDIR ${WORKDIR}

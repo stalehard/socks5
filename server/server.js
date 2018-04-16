@@ -1,44 +1,53 @@
-const argv = require("optimist")
-            .usage("Usage: $0 --port [listen port]")
-            .demand(["port"])
-            .argv;
-const socks5 = require("./lib");
-const telegarm = require("./telegram");
+const
+	socks5 = require('simple-socks'),
+	server = socks5.createServer({
+		authenticate : function (username, password, callback) {
+			// verify username/password
+			if (username !== 'foo' || password !== 'bar') {
+				// respond with auth failure (can be any error)
+				return setImmediate(callback, new Error('invalid credentials'));
+			}
 
-const server = socks5.createServer();
-telegarm.loadIPList("./telegramip.txt");
+			// return successful authentication
+			return setImmediate(callback);
+		}
+	});
 
-server.on("proxyConnect", function (info, socket) {
-    var ip = info.host;
-    var log = `${socket.remoteAddress} <-> ${ip}:${info.port}`;
-    if (!isIP(ip)) {
-        socket.destroy();
-        console.log(log, "reject");
-        return;
-    }
-    if (!telegarm.isTelegramIP(ip)) {
-        socket.destroy();
-        console.log(log, "reject");
-        return;
-    }
-    console.log(log, "connect");
+// start listening!
+server.listen(1080);
+
+server.on('handshake', function () {
+	console.log('new client connection');
 });
 
-server.on("proxyError", function (err) {
-    console.error("unable to connect to remote server:", err.message);
+// When authentication succeeds
+server.on('authenticate', function (username) {
+	console.log('user %s successfully authenticated!', username);
 });
 
-function isIP(str) {
-    var ipArray = str.split(".");
-    if (ipArray.length != 4) return false;
-    for (var item of ipArray) {
-        item = parseInt(item);
-        if (isNaN(item)) return false;
-        if (item >= 1 && item <= 254) continue;
-        return false;
-    }
-    return true;
-}
+// When authentication fails
+server.on('authenticateError', function (username, err) {
+	console.log('user %s failed to authenticate...', username);
+	console.log(err);
+});
 
-server.listen(argv.port);
-console.log(`listen port at ${argv.port}.`);
+// When a reqest arrives for a remote destination
+server.on('proxyConnect', function (info, destination) {
+	console.log('connected to remote server at %s:%d', info.host, info.port);
+
+	destination.on('data', function (data) {
+		console.log(data.length);
+	});
+});
+
+// When an error occurs connecting to remote destination
+server.on('proxyError', function (err) {
+	console.error('unable to connect to remote server');
+	console.error(err);
+});
+
+// When a proxy connection ends
+server.on('proxyEnd', function (response, args) {
+	console.log('socket closed with code %d', response);
+	console.log(args);	
+});
